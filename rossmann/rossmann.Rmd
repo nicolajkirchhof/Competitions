@@ -1,0 +1,134 @@
+---
+title: "Rossmann"
+author: "Nick"
+date: "11. Oktober 2015"
+output:
+  html_document:
+    fig_height: 8
+    fig_width: 16
+    toc: yes
+---
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+
+setwd("~/Projects/Datasets/Rossmann")
+library(data.table)
+library(ggplot2)
+test = fread("test.csv");
+train = fread("train.csv");
+store = fread("store.csv");
+
+```
+
+Show some stats
+
+```{r, echo=FALSE}
+str(train)
+str(test)
+str(store)
+
+train[, Date := as.Date(Date)]
+test[, Date := as.Date(Date)]
+
+unique(train$StateHoliday)
+unique(train$SchoolHoliday)
+
+train[, SchoolHoliday := SchoolHoliday == "1" ] # Convert to logical
+```
+Plot some initial informations:
+```{r}
+# ggplot(train[Open == 1], aes(x = Date, y = Sales, color = SchoolHoliday)) + geom_point()
+# ggplot(train[Open == 1], aes(x = Date, y = Sales, color = StateHoliday)) + geom_point()
+# ggplot(train[Open == 1], aes(x = Date, y = Sales, color = DayOfWeek)) + geom_point()
+# ggplot(train[Open == 1], aes(x = Date, y = Sales, color = Customers)) + geom_point()
+# ggplot(train[Open == 1], aes(x = Date, y = Sales, color = Promo)) + geom_point()
+
+```
+
+The ids and number of Stores that have day where they did not sell anything. Clean out these values because they seem to be outliers.
+
+```{r}
+train[Open == 1 & Sales == 0, .N,by=Store]
+
+trainCleaned = train[Open == 1 & !(Sales == 0)]
+```
+
+Number of samples for stores
+```{r}
+ggplot(trainCleaned[Open == 1,.N,by=Store], aes(x = Store, y = N)) + geom_point()
+```
+Store numbers
+
+```{r}
+ggplot(trainCleaned[Open == 1], aes(x = Date, y = Sales, color = Store)) + geom_point()
+ggplot(trainCleaned[Open == 1 & Store < 5], aes(x = Date, y = Sales, color = Store, shape = SchoolHoliday)) + geom_point()
+```
+Look at the correlations between the stores
+```{r}
+library(corrplot)
+trainCast <- dcast(trainCleaned, Date ~ Store, value.var = "Sales" )
+str(trainCast)
+
+trainCorrs = cor(trainCast[,2:ncol(trainCast), with=FALSE], use = "complete")
+
+
+```
+Visualize correlations
+```{r}
+ggplot(melt(trainCorrs), aes(Var1,Var2, fill=value)) + geom_raster()
+ggplot(melt(trainCorrs>0.8), aes(Var1,Var2, fill=value)) + geom_raster()
+```
+
+Find most correlated ones
+```{r}
+corrStat = data.table(value=colSums(trainCorrs>0.8), x = 1, id = 1:ncol(trainCorrs) )
+corrStat[order(value)]
+ggplot(trainCleaned[Store%in%c(768,887,126, 183)], aes(Date, Sales, color=factor(Store))) +geom_point() + geom_line() +scale_colour_brewer(palette = "Set1")
+
+```
+Highlight that promo is the main influence on sales increase
+
+```{r}
+ggplot(trainCleaned[Store%in%c(768,126)], aes(Date, Sales, color=factor(Store), alpha = Promo)) +geom_point(size=3) + geom_line() +scale_colour_brewer(palette = "Set1")
+
+# Wochentage auf Alpha
+ggplot(trainCleaned[Store%in%c(768,126)], aes(Date, Sales, color=factor(Store), alpha = Promo)) +geom_point(size=3) + geom_line() +scale_colour_brewer(palette = "Set1")
+
+ggplot(trainCleaned[Store%in%c(768,126)], aes(Date, Sales, color=factor(Store), alpha = Promo, shape = factor(DayOfWeek))) +geom_point(size=5) + geom_line() +scale_colour_brewer(palette = "Set1")
+
+ggplot(trainCleaned[Store%in%c()], aes(Date, Sales, shape=factor(Store), color=factor(DayOfWeek), alpha = Promo)) +geom_point(size=3) +scale_colour_brewer(palette = "Set1")
+
+trainCleaned[Store%in%c(768,126), unique(DayOfWeek)]
+```
+
+all stores
+
+```{r}
+nstores = length(unique(trainCleaned$Store))
+
+for (p in 1:nstores){
+  print(ggplot(trainCleaned[Store==p], aes(x=Date, y=Sales, color=factor(DayOfWeek), shape = factor(Promo), group=1, alpha = as.numeric(!SchoolHoliday))) +geom_point(size=3) + geom_line(color="DarkGray") +scale_colour_brewer(palette = "Set1")  + theme_bw() +  scale_alpha(range=c(0.3,1), limits=c(0,1), na.value = 0))
+}
+```
+
+
+
+```{r}
+# ggplot(trainCleaned[Open == 1], aes(x = Date, y = Sales, color = SchoolHoliday)) + geom_point()
+# ggplot(trainCleaned[Open == 1], aes(x = Date, y = Sales, color = StateHoliday)) + geom_point()
+# ggplot(trainCleaned[Open == 1], aes(x = Date, y = Sales, color = DayOfWeek)) + geom_point()
+# ggplot(trainCleaned[Open == 1], aes(x = Date, y = Sales, color = Customers)) + geom_point()
+# ggplot(trainCleaned[Open == 1], aes(x = Date, y = Sales, color = Promo)) + geom_point()
+
+```
+
+
+```{r}
+# ggplot(train, aes(x = Date, y = StateHoliday, color = SchoolHoliday)) + geom_point()
+```
+
+

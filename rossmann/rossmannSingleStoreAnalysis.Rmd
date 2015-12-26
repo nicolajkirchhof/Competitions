@@ -1,0 +1,75 @@
+---
+title: "RossmannSingleStore"
+author: "Nick"
+date: "11. Oktober 2015"
+output:
+  html_document:
+    fig_height: 8
+    fig_width: 16
+    toc: yes
+---
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+
+setwd("~/Projects/Datasets/Rossmann")
+library(data.table)
+library(ggplot2)
+test = fread("test.csv");
+train = fread("train.csv");
+store = fread("store.csv");
+
+str(train)
+str(test)
+str(store)
+
+train[, Date := as.Date(Date)]
+test[, Date := as.Date(Date)]
+
+unique(train$StateHoliday)
+unique(train$SchoolHoliday)
+
+train[, SchoolHoliday := SchoolHoliday == "1" ] # Convert to logical
+
+train[Open == 1 & Sales == 0, .N,by=Store]
+
+trainCleaned = train[Open == 1 & !(Sales == 0)]
+
+nstores = length(unique(trainCleaned$Store))
+
+trainCleaned[, ScaledSales := scale(Sales), by=Store]
+```
+all stores
+
+```{r}
+
+for (day in 1:7) {
+  print(ggplot(trainCleaned[Store%in%seq(1,nstores, 100)&&DayOfWeek==day], aes(x=Date, y=ScaledSales, color=factor(DayOfWeek), shape = factor(Promo), alpha = as.numeric(!SchoolHoliday))) + geom_point(size=3) + geom_line(color="DarkGray") + ggtitle(paste("All Stores Mean "))+ scale_colour_brewer(palette = "Set1")  + theme_bw() +  scale_alpha(range=c(0.3,1), limits=c(0,1), na.value = 0)) 
+}
+# for (p in 1:nstores){
+  
+  # print(ggplot(trainCleaned[Store==p], aes(x=Date, y=ScaledSales, color=factor(DayOfWeek), shape = factor(Promo), group=1, alpha = as.numeric(!SchoolHoliday))) + geom_point(size=3) + geom_line(color="DarkGray") + ggtitle(paste("Store ", p, " Mean ", trainCleaned[Store==p, mean(Sales)], "Std ", trainCleaned[Store==p, sd(Sales)]) ) + scale_colour_brewer(palette = "Set1")  + theme_bw() +  scale_alpha(range=c(0.3,1), limits=c(0,1), na.value = 0)) 
+  # print(ggplot(trainCleaned[Store==p], aes(x=Date, y=Sales, color=factor(DayOfWeek), shape = factor(Promo), group=1, alpha = as.numeric(!SchoolHoliday))) +geom_point(size=3) + geom_line(color="DarkGray") +scale_colour_brewer(palette = "Set1")  + theme_bw() +  scale_alpha(range=c(0.3,1), limits=c(0,1), na.value = 0))
+# }
+```
+
+
+
+```{r}
+# ggplot(trainCleaned[Open == 1], aes(x = Date, y = Sales, color = SchoolHoliday)) + geom_point()
+# ggplot(trainCleaned[Open == 1], aes(x = Date, y = Sales, color = StateHoliday)) + geom_point()
+# ggplot(trainCleaned[Open == 1], aes(x = Date, y = Sales, color = DayOfWeek)) + geom_point()
+# ggplot(trainCleaned[Open == 1], aes(x = Date, y = Sales, color = Customers)) + geom_point()
+# ggplot(trainCleaned[Open == 1], aes(x = Date, y = Sales, color = Promo)) + geom_point()
+
+```
+
+
+```{r}
+# ggplot(train, aes(x = Date, y = StateHoliday, color = SchoolHoliday)) + geom_point()
+```
+
+
